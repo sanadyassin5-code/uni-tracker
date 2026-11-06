@@ -1,0 +1,461 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>University Study Topic Tracker</title>
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- React & ReactDOM -->
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <!-- Babel -->
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <!-- Font Awesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&display=swap');
+    body { font-family: 'Cairo', sans-serif; }
+  </style>
+</head>
+<body class="bg-slate-900 text-slate-100 min-h-screen p-4 md:p-8">
+  <div id="root"></div>
+
+  <script type="text/babel">
+    const { useState, useEffect } = React;
+
+    const initialTopics = [
+      {
+        id: '1',
+        moduleCode: 'chemistry',
+        sectionWeek: 'isomers',
+        topicName: 'Stereoisomers & Enantiomers',
+        priority: 'High',
+        understandingLevel: 'Bad',
+        notesTaken: true,
+        reviewed: false,
+        practiceTested: false,
+        targetDate: '2026-11-15',
+        notes: 'Need to review chiral centers',
+        status: 'Needs Revision'
+      },
+      {
+        id: '2',
+        moduleCode: 'chemistry',
+        sectionWeek: 'alkanes',
+        topicName: 'Nomenclature & Reactions',
+        priority: 'Low',
+        understandingLevel: 'Good',
+        notesTaken: true,
+        reviewed: true,
+        practiceTested: true,
+        targetDate: '2026-11-10',
+        notes: 'Completed practice questions',
+        status: 'Completed'
+      }
+    ];
+
+    function App() {
+      const [topics, setTopics] = useState(() => {
+        const saved = localStorage.getItem('uni_study_topics');
+        return saved ? JSON.parse(saved) : initialTopics;
+      });
+      const [filterModule, setFilterModule] = useState('All');
+      const [searchTerm, setSearchTerm] = useState('');
+      const [isModalOpen, setIsModalOpen] = useState(false);
+      const [editingTopic, setEditingTopic] = useState(null);
+
+      const [formData, setFormData] = useState({
+        moduleCode: '',
+        sectionWeek: '',
+        topicName: '',
+        priority: 'Medium',
+        understandingLevel: 'Medium',
+        notesTaken: false,
+        reviewed: false,
+        practiceTested: false,
+        targetDate: '',
+        notes: '',
+        status: 'Pending'
+      });
+
+      useEffect(() => {
+        localStorage.setItem('uni_study_topics', JSON.stringify(topics));
+      }, [topics]);
+
+      const totalTopics = topics.length;
+      const highPriorityCount = topics.filter(t => t.priority === 'High').length;
+      const needingWorkCount = topics.filter(t => t.understandingLevel === 'Bad').length;
+      
+      const completedTasks = topics.reduce((acc, t) => {
+        let score = 0;
+        if (t.reviewed) score += 0.5;
+        if (t.practiceTested) score += 0.5;
+        return acc + score;
+      }, 0);
+      
+      const completionPercentage = totalTopics > 0 
+        ? Math.round((completedTasks / totalTopics) * 100) 
+        : 0;
+
+      const handleToggleCheck = (id, field) => {
+        setTopics(topics.map(t => t.id === id ? { ...t, [field]: !t[field] } : t));
+      };
+
+      const handleDelete = (id) => {
+        if (confirm('هل أنت تأكد من حذف هذا الموضوع؟')) {
+          setTopics(topics.filter(t => t.id !== id));
+        }
+      };
+
+      const openModal = (topic = null) => {
+        if (topic) {
+          setEditingTopic(topic);
+          setFormData(topic);
+        } else {
+          setEditingTopic(null);
+          setFormData({
+            moduleCode: '',
+            sectionWeek: '',
+            topicName: '',
+            priority: 'Medium',
+            understandingLevel: 'Medium',
+            notesTaken: false,
+            reviewed: false,
+            practiceTested: false,
+            targetDate: '',
+            notes: '',
+            status: 'Pending'
+          });
+        }
+        setIsModalOpen(true);
+      };
+
+      const handleSubmit = (e) => {
+        e.preventDefault();
+        if (editingTopic) {
+          setTopics(topics.map(t => t.id === editingTopic.id ? { ...formData, id: editingTopic.id } : t));
+        } else {
+          setTopics([...topics, { ...formData, id: Date.now().toString() }]);
+        }
+        setIsModalOpen(false);
+      };
+
+      const filteredTopics = topics.filter(t => {
+        const matchesModule = filterModule === 'All' || t.moduleCode.toLowerCase() === filterModule.toLowerCase();
+        const matchesSearch = t.topicName.toLowerCase().includes(searchTerm.toLowerCase()) || 
+                              t.moduleCode.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                              t.sectionWeek.toLowerCase().includes(searchTerm.toLowerCase());
+        return matchesModule && matchesSearch;
+      });
+
+      const uniqueModules = ['All', ...new Set(topics.map(t => t.moduleCode))];
+
+      return (
+        <div className="max-w-7xl mx-auto space-y-6">
+          <div className="flex flex-col md:flex-row justify-between items-start md:items-center bg-slate-800 p-6 rounded-2xl shadow-xl border border-slate-700 gap-4">
+            <div>
+              <h1 className="text-2xl font-bold text-indigo-400 flex items-center gap-2">
+                <i className="fa-solid fa-graduation-cap"></i> University Study Topic Tracker
+              </h1>
+              <p className="text-slate-400 text-sm mt-1">
+                متتبع المواد والمواضيع الدراسية • المصدر: <span className="font-mono text-xs bg-slate-700 px-2 py-0.5 rounded text-indigo-300">uni-topic-tracker-finallv2.xlsx</span>
+              </p>
+            </div>
+            <button 
+              onClick={() => openModal()} 
+              className="bg-indigo-600 hover:bg-indigo-500 text-white px-5 py-2.5 rounded-xl font-bold shadow-lg transition flex items-center gap-2"
+            >
+              <i className="fa-solid fa-plus"></i> إضافة موضوع جديد
+            </button>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="bg-slate-800 p-5 rounded-2xl border border-slate-700 flex items-center justify-between">
+              <div>
+                <p className="text-slate-400 text-sm font-semibold">Total Topics</p>
+                <p className="text-3xl font-extrabold text-white mt-1">{totalTopics}</p>
+              </div>
+              <div className="bg-indigo-900/50 p-3 rounded-xl text-indigo-400">
+                <i className="fa-solid fa-book-open text-2xl"></i>
+              </div>
+            </div>
+
+            <div className="bg-slate-800 p-5 rounded-2xl border border-slate-700 flex items-center justify-between">
+              <div>
+                <p className="text-slate-400 text-sm font-semibold">High Priority</p>
+                <p className="text-3xl font-extrabold text-amber-400 mt-1">{highPriorityCount}</p>
+              </div>
+              <div className="bg-amber-900/50 p-3 rounded-xl text-amber-400">
+                <i className="fa-solid fa-fire text-2xl"></i>
+              </div>
+            </div>
+
+            <div className="bg-slate-800 p-5 rounded-2xl border border-slate-700 flex items-center justify-between">
+              <div>
+                <p className="text-slate-400 text-sm font-semibold">Topics Needing Work</p>
+                <p className="text-3xl font-extrabold text-rose-400 mt-1">{needingWorkCount}</p>
+              </div>
+              <div className="bg-rose-900/50 p-3 rounded-xl text-rose-400">
+                <i className="fa-solid fa-triangle-exclamation text-2xl"></i>
+              </div>
+            </div>
+
+            <div className="bg-slate-800 p-5 rounded-2xl border border-slate-700 flex items-center justify-between">
+              <div>
+                <p className="text-slate-400 text-sm font-semibold">Overall Completion</p>
+                <p className="text-3xl font-extrabold text-emerald-400 mt-1">{completionPercentage}%</p>
+              </div>
+              <div className="bg-emerald-900/50 p-3 rounded-xl text-emerald-400">
+                <i className="fa-solid fa-chart-line text-2xl"></i>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-slate-800 p-4 rounded-2xl border border-slate-700 flex flex-col sm:flex-row gap-4 justify-between items-center">
+            <div className="relative w-full sm:w-72">
+              <input 
+                type="text"
+                placeholder="بحث بالمادة أو اسم الموضوع..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2 pr-10 text-sm focus:outline-none focus:border-indigo-500"
+              />
+              <i className="fa-solid fa-magnifying-glass absolute left-3 top-3 text-slate-500"></i>
+            </div>
+            <div className="flex items-center gap-2 w-full sm:w-auto">
+              <span className="text-sm text-slate-400 font-semibold whitespace-nowrap">تصفية حسب المادة:</span>
+              <select 
+                value={filterModule}
+                onChange={(e) => setFilterModule(e.target.value)}
+                className="bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-indigo-500 w-full sm:w-auto"
+              >
+                {uniqueModules.map(m => (
+                  <option key={m} value={m}>{m}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          <div className="bg-slate-800 rounded-2xl border border-slate-700 overflow-hidden shadow-xl">
+            <div className="overflow-x-auto">
+              <table className="w-full text-right text-sm text-slate-300">
+                <thead className="bg-slate-900/80 text-xs uppercase text-slate-400 border-b border-slate-700">
+                  <tr>
+                    <th className="px-4 py-3">Module Code</th>
+                    <th className="px-4 py-3">Section / Week</th>
+                    <th className="px-4 py-3">Topic Name</th>
+                    <th className="px-4 py-3 text-center">Priority</th>
+                    <th className="px-4 py-3 text-center">Understanding</th>
+                    <th className="px-3 py-3 text-center">Notes Taken</th>
+                    <th className="px-3 py-3 text-center">Reviewed</th>
+                    <th className="px-3 py-3 text-center">Tested</th>
+                    <th className="px-4 py-3">Target Date</th>
+                    <th className="px-4 py-3">Status / Action</th>
+                    <th className="px-4 py-3 text-center">خيارات</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-700">
+                  {filteredTopics.length === 0 ? (
+                    <tr>
+                      <td colSpan="11" className="text-center py-8 text-slate-500">
+                        لا توجد مواضيع مطابقة للبحث
+                      </td>
+                    </tr>
+                  ) : (
+                    filteredTopics.map((t) => (
+                      <tr key={t.id} className="hover:bg-slate-750/50 transition">
+                        <td className="px-4 py-3 font-semibold text-indigo-300">{t.moduleCode}</td>
+                        <td className="px-4 py-3 text-slate-400">{t.sectionWeek}</td>
+                        <td className="px-4 py-3 font-medium text-white">{t.topicName}</td>
+                        <td className="px-4 py-3 text-center">
+                          <span className={`px-2.5 py-1 rounded-full text-xs font-bold ${
+                            t.priority === 'High' ? 'bg-rose-900/60 text-rose-300 border border-rose-700' :
+                            t.priority === 'Medium' ? 'bg-amber-900/60 text-amber-300 border border-amber-700' :
+                            'bg-slate-700 text-slate-300'
+                          }`}>
+                            {t.priority}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 text-center">
+                          <span className={`px-2.5 py-1 rounded-full text-xs font-bold ${
+                            t.understandingLevel === 'Bad' ? 'bg-red-950 text-red-400 border border-red-800' :
+                            t.understandingLevel === 'Medium' ? 'bg-amber-950 text-amber-400 border border-amber-800' :
+                            'bg-emerald-950 text-emerald-400 border border-emerald-800'
+                          }`}>
+                            {t.understandingLevel}
+                          </span>
+                        </td>
+                        <td className="px-3 py-3 text-center">
+                          <input 
+                            type="checkbox" 
+                            checked={t.notesTaken} 
+                            onChange={() => handleToggleCheck(t.id, 'notesTaken')}
+                            className="w-4 h-4 accent-indigo-500 rounded cursor-pointer"
+                          />
+                        </td>
+                        <td className="px-3 py-3 text-center">
+                          <input 
+                            type="checkbox" 
+                            checked={t.reviewed} 
+                            onChange={() => handleToggleCheck(t.id, 'reviewed')}
+                            className="w-4 h-4 accent-emerald-500 rounded cursor-pointer"
+                          />
+                        </td>
+                        <td className="px-3 py-3 text-center">
+                          <input 
+                            type="checkbox" 
+                            checked={t.practiceTested} 
+                            onChange={() => handleToggleCheck(t.id, 'practiceTested')}
+                            className="w-4 h-4 accent-cyan-500 rounded cursor-pointer"
+                          />
+                        </td>
+                        <td className="px-4 py-3 text-xs text-slate-400 font-mono">{t.targetDate || '-'}</td>
+                        <td className="px-4 py-3 text-xs text-slate-300">{t.status || '-'}</td>
+                        <td className="px-4 py-3 text-center">
+                          <div className="flex items-center justify-center gap-2">
+                            <button onClick={() => openModal(t)} className="text-indigo-400 hover:text-indigo-300 p-1">
+                              <i className="fa-solid fa-pen-to-square"></i>
+                            </button>
+                            <button onClick={() => handleDelete(t.id)} className="text-rose-400 hover:text-rose-300 p-1">
+                              <i className="fa-solid fa-trash"></i>
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {isModalOpen && (
+            <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+              <div className="bg-slate-800 border border-slate-700 rounded-2xl p-6 w-full max-w-lg shadow-2xl space-y-4">
+                <div className="flex justify-between items-center border-b border-slate-700 pb-3">
+                  <h3 className="text-lg font-bold text-white">
+                    {editingTopic ? 'تعديل الموضوع' : 'إضافة موضوع جديد'}
+                  </h3>
+                  <button onClick={() => setIsModalOpen(false)} className="text-slate-400 hover:text-white">
+                    <i className="fa-solid fa-xmark text-xl"></i>
+                  </button>
+                </div>
+
+                <form onSubmit={handleSubmit} className="space-y-4 text-sm">
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-slate-400 mb-1">Module Code</label>
+                      <input 
+                        type="text" required 
+                        value={formData.moduleCode}
+                        onChange={(e) => setFormData({...formData, moduleCode: e.target.value})}
+                        className="w-full bg-slate-900 border border-slate-700 rounded-xl p-2.5 text-white focus:outline-none focus:border-indigo-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-slate-400 mb-1">Section / Week</label>
+                      <input 
+                        type="text" required
+                        value={formData.sectionWeek}
+                        onChange={(e) => setFormData({...formData, sectionWeek: e.target.value})}
+                        className="w-full bg-slate-900 border border-slate-700 rounded-xl p-2.5 text-white focus:outline-none focus:border-indigo-500"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-slate-400 mb-1">Topic Name</label>
+                    <input 
+                      type="text" required
+                      value={formData.topicName}
+                      onChange={(e) => setFormData({...formData, topicName: e.target.value})}
+                      className="w-full bg-slate-900 border border-slate-700 rounded-xl p-2.5 text-white focus:outline-none focus:border-indigo-500"
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-slate-400 mb-1">Priority</label>
+                      <select 
+                        value={formData.priority}
+                        onChange={(e) => setFormData({...formData, priority: e.target.value})}
+                        className="w-full bg-slate-900 border border-slate-700 rounded-xl p-2.5 text-white focus:outline-none focus:border-indigo-500"
+                      >
+                        <option value="High">High</option>
+                        <option value="Medium">Medium</option>
+                        <option value="Low">Low</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-slate-400 mb-1">Understanding Level</label>
+                      <select 
+                        value={formData.understandingLevel}
+                        onChange={(e) => setFormData({...formData, understandingLevel: e.target.value})}
+                        className="w-full bg-slate-900 border border-slate-700 rounded-xl p-2.5 text-white focus:outline-none focus:border-indigo-500"
+                      >
+                        <option value="Bad">Bad</option>
+                        <option value="Medium">Medium</option>
+                        <option value="Good">Good</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-slate-400 mb-1">Target Date</label>
+                      <input 
+                        type="date"
+                        value={formData.targetDate}
+                        onChange={(e) => setFormData({...formData, targetDate: e.target.value})}
+                        className="w-full bg-slate-900 border border-slate-700 rounded-xl p-2.5 text-white focus:outline-none focus:border-indigo-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-slate-400 mb-1">Status / Action</label>
+                      <input 
+                        type="text"
+                        value={formData.status}
+                        onChange={(e) => setFormData({...formData, status: e.target.value})}
+                        className="w-full bg-slate-900 border border-slate-700 rounded-xl p-2.5 text-white focus:outline-none focus:border-indigo-500"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-slate-400 mb-1">Notes / Key Links</label>
+                    <textarea 
+                      rows="2"
+                      value={formData.notes}
+                      onChange={(e) => setFormData({...formData, notes: e.target.value})}
+                      className="w-full bg-slate-900 border border-slate-700 rounded-xl p-2.5 text-white focus:outline-none focus:border-indigo-500"
+                    ></textarea>
+                  </div>
+
+                  <div className="flex gap-2 justify-end pt-2">
+                    <button 
+                      type="button" 
+                      onClick={() => setIsModalOpen(false)}
+                      className="px-4 py-2 rounded-xl bg-slate-700 text-slate-300 hover:bg-slate-600"
+                    >
+                      إلغاء
+                    </button>
+                    <button 
+                      type="submit"
+                      className="px-5 py-2 rounded-xl bg-indigo-600 text-white font-bold hover:bg-indigo-500 shadow-lg"
+                    >
+                      حفظ
+                    </button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+  </script>
+</body>
+</html>
