@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>University Study Topic Tracker</title>
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- React & ReactDOM -->
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <!-- Babel -->
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <!-- Font Awesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap');
+    
+    body { 
+      font-family: 'Cairo', sans-serif; 
+      background: radial-gradient(circle at top right, #fef3c7 0%, #fafaf9 40%, #f5f5f4 100%);
+      background-attachment: fixed;
+    }
+
+    .gold-gradient-text {
+      background: linear-gradient(135deg, #b45309 0%, #d97706 50%, #f59e0b 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .gold-btn {
+      background: linear-gradient(135deg, #d97706 0%, #b45309 100%);
+      box-shadow: 0 4px 15px rgba(217, 119, 6, 0.25);
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    
+    .gold-btn:hover {
+      background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+      box-shadow: 0 6px 20px rgba(217, 119, 6, 0.4);
+      transform: translateY(-2px);
+    }
+
+    .gold-card {
+      background: rgba(255, 255, 255, 0.85);
+      backdrop-filter: blur(12px);
+      border: 1px solid rgba(251, 191, 36, 0.3);
+      box-shadow: 0 10px 30px -5px rgba(217, 119, 6, 0.05);
+      transition: all 0.3s ease;
+    }
+
+    .gold-card:hover {
+      border-color: rgba(245, 158, 11, 0.6);
+      box-shadow: 0 15px 35px -5px rgba(217, 119, 6, 0.12);
+      transform: translateY(-3px);
+    }
+
+    .gold-glow-icon {
+      filter: drop-shadow(0px 0px 8px rgba(245, 158, 11, 0.4));
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .animate-fade-in {
+      animation: fadeIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    }
+  </style>
+</head>
+<body class="text-stone-800 min-h-screen p-4 md:p-8">
+  <div id="root"></div>
+
+  <script type="text/babel">
+    const { useState, useEffect } = React;
+
+    const defaultTopics = [
+      {
+        id: '1',
+        moduleCode: 'chemistry',
+        sectionWeek: 'isomers',
+        topicName: 'Stereoisomers & Enantiomers',
+        priority: 'High',
+        understandingLevel: 'Bad',
+        notesTaken: true,
+        reviewed: false,
+        practiceTested: false,
+        targetDate: '2026-11-15',
+        notes: 'Review chiral centers',
+        status: 'Needs Work'
+      },
+      {
+        id: '2',
+        moduleCode: 'chemistry',
+        sectionWeek: 'alkanes',
+        topicName: 'Nomenclature & Reactions',
+        priority: 'Low',
+        understandingLevel: 'Good',
+        notesTaken: true,
+        reviewed: true,
+        practiceTested: true,
+        targetDate: '2026-11-10',
+        notes: 'Completed practice set',
+        status: 'Completed'
+      }
+    ];
+
+    function App() {
+      const [topics, setTopics] = useState(() => {
+        const saved = localStorage.getItem('uni_study_topics');
+        return saved ? JSON.parse(saved) : defaultTopics;
+      });
+
+      const [filterModule, setFilterModule] = useState('All');
+      const [searchTerm, setSearchTerm] = useState('');
+      const [isModalOpen, setIsModalOpen] = useState(false);
+      const [editingTopic, setEditingTopic] = useState(null);
+
+      const [formData, setFormData] = useState({
+        moduleCode: '',
+        sectionWeek: '',
+        topicName: '',
+        priority: 'Medium',
+        understandingLevel: 'Medium',
+        notesTaken: false,
+        reviewed: false,
+        practiceTested: false,
+        targetDate: '',
+        notes: '',
+        status: 'Pending'
+      });
+
+      useEffect(() => {
+        localStorage.setItem('uni_study_topics', JSON.stringify(topics));
+      }, [topics]);
+
+      const handleToggleCheck = (id, field) => {
+        setTopics(topics.map(t => t.id === id ? { ...t, [field]: !t[field] } : t));
+      };
+
+      const handleDelete = (id) => {
+        if (confirm('هل أنت تأكد من حذف هذا الموضوع؟')) {
+          setTopics(topics.filter(t => t.id !== id));
+        }
+      };
+
+      const openModal = (topic = null) => {
+        if (topic) {
+          setEditingTopic(topic);
+          setFormData(topic);
+        } else {
+          setEditingTopic(null);
+          setFormData({
+            moduleCode: '',
+            sectionWeek: '',
+            topicName: '',
+            priority: 'Medium',
+            understandingLevel: 'Medium',
+            notesTaken: false,
+            reviewed: false,
+            practiceTested: false,
+            targetDate: '',
+            notes: '',
+            status: 'Pending'
+          });
+        }
+        setIsModalOpen(true);
+      };
+
+      const handleSubmit = (e) => {
+        e.preventDefault();
+        if (editingTopic) {
+          setTopics(topics.map(t => t.id === editingTopic.id ? { ...formData, id: editingTopic.id } : t));
+        } else {
+          setTopics([...topics, { ...formData, id: Date.now().toString() }]);
+        }
+        setIsModalOpen(false);
+      };
+
+      const totalTopics = topics.length;
+      const highPriorityCount = topics.filter(t => t.priority === 'High').length;
+      const needingWorkCount = topics.filter(t => t.understandingLevel === 'Bad').length;
+      const completedTasks = topics.reduce((acc, t) => acc + (t.reviewed ? 0.5 : 0) + (t.practiceTested ? 0.5 : 0), 0);
+      const completionPercentage = totalTopics > 0 ? Math.round((completedTasks / totalTopics) * 100) : 0;
+
+      const filteredTopics = topics.filter(t => {
+        const matchesModule = filterModule === 'All' || (t.moduleCode && t.moduleCode.toLowerCase() === filterModule.toLowerCase());
+        const matchesSearch = (t.topicName && t.topicName.toLowerCase().includes(searchTerm.toLowerCase())) || 
+                              (t.moduleCode && t.moduleCode.toLowerCase().includes(searchTerm.toLowerCase()));
+        return matchesModule && matchesSearch;
+      });
+
+      const uniqueModules = ['All', ...new Set(topics.map(t => t.moduleCode
