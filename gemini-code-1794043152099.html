@@ -1,0 +1,562 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>University Study Topic Tracker</title>
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- React & ReactDOM -->
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <!-- Babel -->
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <!-- Font Awesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&display=swap');
+    
+    body { 
+      font-family: 'Cairo', sans-serif; 
+      background: radial-gradient(circle at top right, #fffbeb 0%, #fafaf9 40%, #f5f5f4 100%);
+      background-attachment: fixed;
+    }
+
+    /* Custom Gold Scrollbar */
+    ::-webkit-scrollbar {
+      height: 8px;
+      width: 8px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #fef3c7;
+      border-radius: 4px;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #d97706;
+      border-radius: 4px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #b45309;
+    }
+
+    /* Metallic Gold Text & Gradients */
+    .gold-gradient-text {
+      background: linear-gradient(135deg, #92400e 0%, #d97706 45%, #b45309 80%, #78350f 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .gold-btn {
+      background: linear-gradient(135deg, #d97706 0%, #b45309 100%);
+      box-shadow: 0 4px 15px -1px rgba(217, 119, 6, 0.35);
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    
+    .gold-btn:hover {
+      background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+      box-shadow: 0 8px 25px -2px rgba(217, 119, 6, 0.5);
+      transform: translateY(-2px) scale(1.01);
+    }
+
+    /* Glassmorphism & Gold Glow Cards */
+    .gold-card {
+      background: rgba(255, 255, 255, 0.88);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid rgba(245, 158, 11, 0.25);
+      box-shadow: 0 10px 30px -5px rgba(217, 119, 6, 0.08), 0 4px 6px -2px rgba(0, 0, 0, 0.03);
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .gold-card:hover {
+      border-color: rgba(217, 119, 6, 0.5);
+      box-shadow: 0 20px 40px -10px rgba(217, 119, 6, 0.16);
+      transform: translateY(-3px);
+    }
+
+    .gold-glow-icon {
+      filter: drop-shadow(0px 0px 8px rgba(245, 158, 11, 0.45));
+    }
+
+    /* Fade & Scale Animations */
+    @keyframes fadeInScale {
+      from {
+        opacity: 0;
+        transform: scale(0.97) translateY(8px);
+      }
+      to {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+      }
+    }
+
+    .animate-fade-in {
+      animation: fadeInScale 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    }
+
+    /* Interactive Checkbox Effect */
+    .custom-gold-checkbox {
+      accent-color: #d97706;
+      width: 1.15rem;
+      height: 1.15rem;
+      cursor: pointer;
+      transition: transform 0.2s ease;
+    }
+
+    .custom-gold-checkbox:hover {
+      transform: scale(1.2);
+    }
+  </style>
+</head>
+<body class="text-stone-800 min-h-screen p-4 md:p-8">
+  <div id="root"></div>
+
+  <script type="text/babel">
+    const { useState, useEffect } = React;
+
+    const initialTopics = [
+      {
+        id: '1',
+        moduleCode: 'chemistry',
+        sectionWeek: 'isomers',
+        topicName: 'Stereoisomers & Enantiomers',
+        priority: 'High',
+        understandingLevel: 'Bad',
+        notesTaken: true,
+        reviewed: false,
+        practiceTested: false,
+        targetDate: '2026-11-15',
+        notes: 'Need to review chiral centers',
+        status: 'Needs Revision'
+      },
+      {
+        id: '2',
+        moduleCode: 'chemistry',
+        sectionWeek: 'alkanes',
+        topicName: 'Nomenclature & Reactions',
+        priority: 'Low',
+        understandingLevel: 'Good',
+        notesTaken: true,
+        reviewed: true,
+        practiceTested: true,
+        targetDate: '2026-11-10',
+        notes: 'Completed practice questions',
+        status: 'Completed'
+      }
+    ];
+
+    function App() {
+      const [topics, setTopics] = useState(() => {
+        const saved = localStorage.getItem('uni_study_topics');
+        return saved ? JSON.parse(saved) : initialTopics;
+      });
+      const [filterModule, setFilterModule] = useState('All');
+      const [searchTerm, setSearchTerm] = useState('');
+      const [isModalOpen, setIsModalOpen] = useState(false);
+      const [editingTopic, setEditingTopic] = useState(null);
+
+      const [formData, setFormData] = useState({
+        moduleCode: '',
+        sectionWeek: '',
+        topicName: '',
+        priority: 'Medium',
+        understandingLevel: 'Medium',
+        notesTaken: false,
+        reviewed: false,
+        practiceTested: false,
+        targetDate: '',
+        notes: '',
+        status: 'Pending'
+      });
+
+      useEffect(() => {
+        localStorage.setItem('uni_study_topics', JSON.stringify(topics));
+      }, [topics]);
+
+      const totalTopics = topics.length;
+      const highPriorityCount = topics.filter(t => t.priority === 'High').length;
+      const needingWorkCount = topics.filter(t => t.understandingLevel === 'Bad').length;
+      
+      const completedTasks = topics.reduce((acc, t) => {
+        let score = 0;
+        if (t.reviewed) score += 0.5;
+        if (t.practiceTested) score += 0.5;
+        return acc + score;
+      }, 0);
+      
+      const completionPercentage = totalTopics > 0 
+        ? Math.round((completedTasks / totalTopics) * 100) 
+        : 0;
+
+      const handleToggleCheck = (id, field) => {
+        setTopics(topics.map(t => t.id === id ? { ...t, [field]: !t[field] } : t));
+      };
+
+      const handleDelete = (id) => {
+        if (confirm('هل أنت تأكد من حذف هذا الموضوع؟')) {
+          setTopics(topics.filter(t => t.id !== id));
+        }
+      };
+
+      const openModal = (topic = null) => {
+        if (topic) {
+          setEditingTopic(topic);
+          setFormData(topic);
+        } else {
+          setEditingTopic(null);
+          setFormData({
+            moduleCode: '',
+            sectionWeek: '',
+            topicName: '',
+            priority: 'Medium',
+            understandingLevel: 'Medium',
+            notesTaken: false,
+            reviewed: false,
+            practiceTested: false,
+            targetDate: '',
+            notes: '',
+            status: 'Pending'
+          });
+        }
+        setIsModalOpen(true);
+      };
+
+      const handleSubmit = (e) => {
+        e.preventDefault();
+        if (editingTopic) {
+          setTopics(topics.map(t => t.id === editingTopic.id ? { ...formData, id: editingTopic.id } : t));
+        } else {
+          setTopics([...topics, { ...formData, id: Date.now().toString() }]);
+        }
+        setIsModalOpen(false);
+      };
+
+      const filteredTopics = topics.filter(t => {
+        const matchesModule = filterModule === 'All' || (t.moduleCode && t.moduleCode.toLowerCase() === filterModule.toLowerCase());
+        const matchesSearch = (t.topicName && t.topicName.toLowerCase().includes(searchTerm.toLowerCase())) || 
+                              (t.moduleCode && t.moduleCode.toLowerCase().includes(searchTerm.toLowerCase())) ||
+                              (t.sectionWeek && t.sectionWeek.toLowerCase().includes(searchTerm.toLowerCase()));
+        return matchesModule && matchesSearch;
+      });
+
+      const uniqueModules = ['All', ...new Set(topics.map(t => t.moduleCode).filter(Boolean))];
+
+      return (
+        <div className="max-w-7xl mx-auto space-y-6 animate-fade-in">
+          {/* Main Title Header */}
+          <div className="flex flex-col md:flex-row justify-between items-start md:items-center gold-card p-6 rounded-3xl gap-4">
+            <div className="flex items-center gap-4">
+              <div className="w-13 h-13 w-12 h-12 bg-gradient-to-tr from-amber-600 via-amber-500 to-yellow-400 rounded-2xl flex items-center justify-center text-white text-2xl shadow-lg shadow-amber-500/30">
+                <i className="fa-solid fa-graduation-cap"></i>
+              </div>
+              <div>
+                <h1 className="text-2xl font-black gold-gradient-text tracking-tight">
+                  University Study Topic Tracker
+                </h1>
+                <p className="text-stone-500 text-xs mt-0.5 font-medium">
+                  متتبع المواد الدراسية الأكاديمي • المصدر: <span className="font-mono text-xs bg-amber-100/70 border border-amber-300 text-amber-900 px-2 py-0.5 rounded-md">uni-topic-tracker-finallv2.xlsx</span>
+                </p>
+              </div>
+            </div>
+            <button 
+              onClick={() => openModal()} 
+              className="gold-btn text-white px-5 py-2.5 rounded-2xl font-bold text-sm flex items-center gap-2 justify-center w-full md:w-auto"
+            >
+              <i className="fa-solid fa-plus text-xs"></i> إضافة موضوع جديد
+            </button>
+          </div>
+
+          {/* Metrics Dashboard */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="gold-card p-5 rounded-3xl flex justify-between items-center">
+              <div>
+                <p className="text-stone-500 text-xs font-bold uppercase tracking-wider">Total Topics</p>
+                <p className="text-3xl font-black text-stone-800 mt-1">{totalTopics}</p>
+              </div>
+              <div className="w-12 h-12 bg-amber-100/90 rounded-2xl flex items-center justify-center text-amber-700 gold-glow-icon">
+                <i className="fa-solid fa-book-open text-xl"></i>
+              </div>
+            </div>
+
+            <div className="gold-card p-5 rounded-3xl flex justify-between items-center">
+              <div>
+                <p className="text-stone-500 text-xs font-bold uppercase tracking-wider">High Priority</p>
+                <p className="text-3xl font-black text-amber-600 mt-1">{highPriorityCount}</p>
+              </div>
+              <div className="w-12 h-12 bg-amber-500/10 rounded-2xl flex items-center justify-center text-amber-600 gold-glow-icon">
+                <i className="fa-solid fa-fire text-xl"></i>
+              </div>
+            </div>
+
+            <div className="gold-card p-5 rounded-3xl flex justify-between items-center">
+              <div>
+                <p className="text-stone-500 text-xs font-bold uppercase tracking-wider">Topics Needing Work</p>
+                <p className="text-3xl font-black text-rose-500 mt-1">{needingWorkCount}</p>
+              </div>
+              <div className="w-12 h-12 bg-rose-100/80 rounded-2xl flex items-center justify-center text-rose-600 shadow-sm">
+                <i className="fa-solid fa-triangle-exclamation text-xl"></i>
+              </div>
+            </div>
+
+            <div className="gold-card p-5 rounded-3xl flex justify-between items-center">
+              <div>
+                <p className="text-stone-500 text-xs font-bold uppercase tracking-wider">Overall Completion</p>
+                <p className="text-3xl font-black text-emerald-600 mt-1">{completionPercentage}%</p>
+              </div>
+              <div className="w-12 h-12 bg-emerald-100/80 rounded-2xl flex items-center justify-center text-emerald-600 shadow-sm">
+                <i className="fa-solid fa-chart-line text-xl"></i>
+              </div>
+            </div>
+          </div>
+
+          {/* Search & Filter Controls */}
+          <div className="gold-card p-4 rounded-2xl flex flex-col sm:flex-row gap-4 justify-between items-center">
+            <div className="relative w-full sm:w-80">
+              <input 
+                type="text"
+                placeholder="بحث بالمادة أو اسم الموضوع..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full bg-white border border-amber-200/90 rounded-xl px-4 py-2 pr-9 text-sm text-stone-800 focus:outline-none focus:ring-2 focus:ring-amber-500/40"
+              />
+              <i className="fa-solid fa-magnifying-glass absolute right-3 top-3 text-amber-600/60 text-xs"></i>
+            </div>
+            <div className="flex items-center gap-2 w-full sm:w-auto">
+              <span className="text-xs text-stone-500 font-bold whitespace-nowrap">تصفية حسب المادة:</span>
+              <select 
+                value={filterModule}
+                onChange={(e) => setFilterModule(e.target.value)}
+                className="w-full sm:w-auto bg-white border border-amber-200/90 rounded-xl px-3 py-2 text-sm text-stone-800 font-medium focus:outline-none focus:ring-2 focus:ring-amber-500/40"
+              >
+                {uniqueModules.map(m => (
+                  <option key={m} value={m}>{m}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          {/* Topics Table Container */}
+          <div className="gold-card rounded-3xl overflow-hidden shadow-2xl">
+            <div className="overflow-x-auto">
+              <table className="w-full text-right text-sm">
+                <thead className="bg-gradient-to-r from-amber-100/80 via-amber-50 to-amber-100/80 border-b border-amber-200/70 text-xs text-amber-950 font-bold uppercase tracking-wider">
+                  <tr>
+                    <th className="px-4 py-3.5">Module Code</th>
+                    <th className="px-4 py-3.5">Section / Week</th>
+                    <th className="px-4 py-3.5">Topic Name</th>
+                    <th className="px-4 py-3.5 text-center">Priority</th>
+                    <th className="px-4 py-3.5 text-center">Understanding</th>
+                    <th className="px-3 py-3.5 text-center">Notes</th>
+                    <th className="px-3 py-3.5 text-center">Reviewed</th>
+                    <th className="px-3 py-3.5 text-center">Tested</th>
+                    <th className="px-4 py-3.5">Target Date</th>
+                    <th className="px-4 py-3.5">Status / Action</th>
+                    <th className="px-4 py-3.5 text-center">خيارات</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-amber-100/60 text-stone-700">
+                  {filteredTopics.length === 0 ? (
+                    <tr>
+                      <td colSpan="11" className="text-center py-12 text-stone-400 font-medium">
+                        لا توجد مواضيع مطابقة للبحث
+                      </td>
+                    </tr>
+                  ) : (
+                    filteredTopics.map((t) => (
+                      <tr key={t.id} className="hover:bg-amber-50/50 transition-colors duration-200">
+                        <td className="px-4 py-3.5 font-bold text-amber-900">{t.moduleCode}</td>
+                        <td className="px-4 py-3.5 text-stone-500 text-xs font-medium">{t.sectionWeek}</td>
+                        <td className="px-4 py-3.5 font-bold text-stone-800">{t.topicName}</td>
+                        <td className="px-4 py-3.5 text-center">
+                          <span className={`px-2.5 py-1 rounded-full text-xs font-bold shadow-sm ${
+                            t.priority === 'High' ? 'bg-amber-100 text-amber-900 border border-amber-300' :
+                            t.priority === 'Medium' ? 'bg-yellow-50 text-yellow-800 border border-yellow-200' :
+                            'bg-stone-100 text-stone-600 border border-stone-200'
+                          }`}>
+                            {t.priority}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3.5 text-center">
+                          <span className={`px-2.5 py-1 rounded-full text-xs font-bold shadow-sm ${
+                            t.understandingLevel === 'Bad' ? 'bg-rose-100 text-rose-800 border border-rose-300' :
+                            t.understandingLevel === 'Medium' ? 'bg-amber-100 text-amber-900 border border-amber-300' :
+                            'bg-emerald-100 text-emerald-800 border border-emerald-300'
+                          }`}>
+                            {t.understandingLevel}
+                          </span>
+                        </td>
+                        <td className="px-3 py-3.5 text-center">
+                          <input 
+                            type="checkbox" 
+                            checked={t.notesTaken} 
+                            onChange={() => handleToggleCheck(t.id, 'notesTaken')}
+                            className="custom-gold-checkbox"
+                          />
+                        </td>
+                        <td className="px-3 py-3.5 text-center">
+                          <input 
+                            type="checkbox" 
+                            checked={t.reviewed} 
+                            onChange={() => handleToggleCheck(t.id, 'reviewed')}
+                            className="custom-gold-checkbox"
+                          />
+                        </td>
+                        <td className="px-3 py-3.5 text-center">
+                          <input 
+                            type="checkbox" 
+                            checked={t.practiceTested} 
+                            onChange={() => handleToggleCheck(t.id, 'practiceTested')}
+                            className="custom-gold-checkbox"
+                          />
+                        </td>
+                        <td className="px-4 py-3.5 text-xs text-stone-500 font-mono">{t.targetDate || '-'}</td>
+                        <td className="px-4 py-3.5 text-xs text-stone-600 font-medium">{t.status || '-'}</td>
+                        <td className="px-4 py-3.5 text-center">
+                          <div className="flex items-center justify-center gap-2">
+                            <button onClick={() => openModal(t)} className="text-amber-700 hover:text-amber-900 p-1.5 transition">
+                              <i className="fa-solid fa-pen-to-square"></i>
+                            </button>
+                            <button onClick={() => handleDelete(t.id)} className="text-rose-400 hover:text-rose-600 p-1.5 transition">
+                              <i className="fa-solid fa-trash"></i>
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {/* Add / Edit Modal */}
+          {isModalOpen && (
+            <div className="fixed inset-0 bg-stone-900/40 backdrop-blur-md flex items-center justify-center p-4 z-50 animate-fade-in">
+              <div className="bg-white border border-amber-200/90 rounded-3xl p-6 w-full max-w-lg shadow-2xl space-y-4">
+                <div className="flex justify-between items-center border-b border-amber-100 pb-3">
+                  <h3 className="text-lg font-black gold-gradient-text">
+                    {editingTopic ? 'تعديل الموضوع' : 'إضافة موضوع جديد'}
+                  </h3>
+                  <button onClick={() => setIsModalOpen(false)} className="text-stone-400 hover:text-stone-700 transition">
+                    <i className="fa-solid fa-xmark text-lg"></i>
+                  </button>
+                </div>
+
+                <form onSubmit={handleSubmit} className="space-y-4 text-sm">
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-stone-600 mb-1 font-semibold">Module Code</label>
+                      <input 
+                        type="text" required 
+                        value={formData.moduleCode}
+                        onChange={(e) => setFormData({...formData, moduleCode: e.target.value})}
+                        className="w-full bg-stone-50 border border-amber-200/90 rounded-xl p-2.5 text-stone-800 focus:outline-none focus:ring-2 focus:ring-amber-500/40"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-stone-600 mb-1 font-semibold">Section / Week</label>
+                      <input 
+                        type="text" required
+                        value={formData.sectionWeek}
+                        onChange={(e) => setFormData({...formData, sectionWeek: e.target.value})}
+                        className="w-full bg-stone-50 border border-amber-200/90 rounded-xl p-2.5 text-stone-800 focus:outline-none focus:ring-2 focus:ring-amber-500/40"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-stone-600 mb-1 font-semibold">Topic Name</label>
+                    <input 
+                      type="text" required
+                      value={formData.topicName}
+                      onChange={(e) => setFormData({...formData, topicName: e.target.value})}
+                      className="w-full bg-stone-50 border border-amber-200/90 rounded-xl p-2.5 text-stone-800 focus:outline-none focus:ring-2 focus:ring-amber-500/40"
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-stone-600 mb-1 font-semibold">Priority</label>
+                      <select 
+                        value={formData.priority}
+                        onChange={(e) => setFormData({...formData, priority: e.target.value})}
+                        className="w-full bg-stone-50 border border-amber-200/90 rounded-xl p-2.5 text-stone-800 focus:outline-none focus:ring-2 focus:ring-amber-500/40"
+                      >
+                        <option value="High">High</option>
+                        <option value="Medium">Medium</option>
+                        <option value="Low">Low</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-stone-600 mb-1 font-semibold">Understanding Level</label>
+                      <select 
+                        value={formData.understandingLevel}
+                        onChange={(e) => setFormData({...formData, understandingLevel: e.target.value})}
+                        className="w-full bg-stone-50 border border-amber-200/90 rounded-xl p-2.5 text-stone-800 focus:outline-none focus:ring-2 focus:ring-amber-500/40"
+                      >
+                        <option value="Bad">Bad</option>
+                        <option value="Medium">Medium</option>
+                        <option value="Good">Good</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-stone-600 mb-1 font-semibold">Target Date</label>
+                      <input 
+                        type="date"
+                        value={formData.targetDate}
+                        onChange={(e) => setFormData({...formData, targetDate: e.target.value})}
+                        className="w-full bg-stone-50 border border-amber-200/90 rounded-xl p-2.5 text-stone-800 focus:outline-none focus:ring-2 focus:ring-amber-500/40"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-stone-600 mb-1 font-semibold">Status / Action</label>
+                      <input 
+                        type="text"
+                        value={formData.status}
+                        onChange={(e) => setFormData({...formData, status: e.target.value})}
+                        className="w-full bg-stone-50 border border-amber-200/90 rounded-xl p-2.5 text-stone-800 focus:outline-none focus:ring-2 focus:ring-amber-500/40"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-stone-600 mb-1 font-semibold">Notes / Key Links</label>
+                    <textarea 
+                      rows="2"
+                      value={formData.notes}
+                      onChange={(e) => setFormData({...formData, notes: e.target.value})}
+                      className="w-full bg-stone-50 border border-amber-200/90 rounded-xl p-2.5 text-stone-800 focus:outline-none focus:ring-2 focus:ring-amber-500/40"
+                    ></textarea>
+                  </div>
+
+                  <div className="flex gap-2 justify-end pt-2">
+                    <button 
+                      type="button" 
+                      onClick={() => setIsModalOpen(false)}
+                      className="px-4 py-2 rounded-xl bg-stone-200 text-stone-700 font-semibold hover:bg-stone-300 transition"
+                    >
+                      إلغاء
+                    </button>
+                    <button 
+                      type="submit"
+                      className="gold-btn px-6 py-2 rounded-xl text-white font-bold"
+                    >
+                      حفظ
+                    </button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+  </script>
+</body>
+</html>
